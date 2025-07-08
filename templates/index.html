@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Datos del ESP32</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background: #f9f9f9;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #datos {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            font-family: monospace;
+        }
+
+        canvas {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 1rem;
+        }
+    </style>`
+</head>
+<body>
+
+    <h1>Datos en tiempo real desde el ESP32:</h1>
+    <div id="datos"></div>
+
+    <h2>Gráfica en tiempo real:</h2>
+    <canvas id="grafica" width="600" height="300"></canvas>
+    
+    <h3>Slider para el envío de valores</h3>
+    <div class="slider-container">
+    <label for="slider">Frecuencia [Hz]: <span id="sliderValue">1</span></label><br>
+    <input type="range" id="slider" min="0" max="3" value="0.4" step="0.1" />
+    </div>
+  
+    <div class="slider-tm">
+    <label for="slider">Tm [ms]: <span id="sliderValue-tm">100</span></label><br>
+    <input type="range" id="slider-tm" min="2" max="100" value="100" step="2" />
+    </div>
+
+
+<script>
+        const socket = io();  
+        const datosDiv = document.getElementById('datos');
+
+        // Crear y configurar la gráfica
+        const ctx = document.getElementById('grafica').getContext('2d');
+        const grafica = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Dato ESP32',
+                    data: [],
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                animation: false,
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        socket.on('dato_esp32', (data) => {
+            const valor = parseFloat(data.dato);
+            const hora = new Date().toLocaleTimeString();
+
+            // Agregar texto al historial
+            const p = document.createElement('p');
+            p.textContent = `[${hora}] ${data.dato}`;
+            datosDiv.appendChild(p);
+            datosDiv.scrollTop = datosDiv.scrollHeight;  // Autoscroll
+
+            // Agregar dato a la gráfica
+            grafica.data.labels.push(hora);
+            grafica.data.datasets[0].data.push(valor);
+            
+
+            // Limitar la cantidad de puntos en la gráfica
+            if (grafica.data.labels.length > 100) {
+                grafica.data.labels.shift();
+                grafica.data.datasets[0].data.shift();
+            }
+            grafica.update();
+
+
+
+            });
+
+
+        // Envio del valor del slider al backend
+        const slider = document.getElementById("slider");
+        const sliderValue = document.getElementById("sliderValue");
+
+        slider.addEventListener("input", () => {
+        const valor = slider.value;
+        sliderValue.textContent = valor;
+        console.log(slider.value)
+        // Emitir el valor al servidor
+        socket.emit("freq_change", { value: valor });
+        });
+
+
+        // Envio del valor del slider TM al backend
+        const sliderTm = document.getElementById("slider-tm");
+        const sliderTmValue = document.getElementById("sliderValue-tm");
+
+        sliderTm.addEventListener("input", () => {
+        const valor = sliderTm.value;
+        sliderTmValue.textContent = valor;
+        console.log(sliderTm.value)
+        // Emitir el valor al servidor
+        socket.emit("Tm_change", { value: valor });
+        });
+
+    </script>
+
+</body>
+</html>
