@@ -13,7 +13,8 @@ import asyncio
 import socketio
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 import websockets
@@ -24,9 +25,17 @@ import subprocess
 import base64
 from onvif import ONVIFCamera
 
+from starlette.middleware.gzip import GZipMiddleware
 
 # Crear aplicación FastAPI
 app = FastAPI()
+
+#####################################################################################
+# Middleware que comprime las respuestas para que la integración backend-fronted
+# sea más fluida
+#####################################################################################
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # bytes
+
 
 #####################################################################################
 # Crear servidor Socket.IO
@@ -37,17 +46,36 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 #####################################################################################
 # Templates
 #####################################################################################
-# Montar carpeta de templates (para frontend)
+
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+#####################################################################################
+# Archivos estáticos del frontend
+#####################################################################################
+FRONTEND_PATH = "../virtyremlab-web-react-fronted/dist" # Cambiar por una ruta propia en 
+#despliegue de docker
+
+app.mount("/assets", StaticFiles(directory=f"{FRONTEND_PATH}/assets"), name="assets")
 
 
 #####################################################################################
 # Endpoints
 #####################################################################################
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=True)
+def root():
+    return FileResponse(f"{FRONTEND_PATH}/index.html")
+
+# Ruta raíz de prueba
+# @app.get("/", response_class=HTMLResponse)
+# async def root(request: Request):
+#     return templates.TemplateResponse("index.html", {"request": request})
+
+# Fallback 
+@app.exception_handler(404)
+async def redirect_404_to_root(request, exc):
+    return RedirectResponse(url="/")
+
 
 
 #####################################################################################
@@ -118,7 +146,8 @@ PASS = "cam_aeropendulo"
 
 
 # Inicializa la cámara
-mycam = ONVIFCamera(IP, 2020, USER, PASS)
+
+#mycam = ONVIFCamera(IP, 2020, USER, PASS) # Descomentar para habilitar el control de la cámara.
 
 @app.get("/ptz")
 async def move_ptz(direction: str):
