@@ -1,0 +1,33 @@
+name: remlab-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+
+  # Core backend (FastAPI + websockets + SIO)
+  - fastapi=0.115
+  - starlette=0.46
+  - uvicorn=0.34
+  - websockets=15
+  - python-socketio=5.13
+  - python-engineio=4.12
+
+  # Red y utilidades
+  - httpx=0.28
+  - pyyaml
+  - jinja2
+
+  # Paquetes con C via conda (mejor que pip)
+  - cffi
+  - cryptography
+  - lxml
+  - uvloop
+
+  # SOAP/ONVIF base (zeep existe en conda; el wrapper onvif_zeep, no)
+  - zeep
+
+  - pip:
+      # Solo lo que no esté en conda-forge
+      - onvif_zeep==0.2.12
