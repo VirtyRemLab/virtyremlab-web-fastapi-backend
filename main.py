@@ -6,17 +6,19 @@
 # La comunicación entre el dispositivo de prácticas y el backend se realiza mediante websocket
 # La comunicación entre el backend y el frontend se realiza mediante socket IO (websockets) 
 
-# Para ejecutar la aplicación: uvicorn main:socket_app --host 0.0.0.0 --port 8000 --workers 1 --loop uvloop
+# Para ejecutar la aplicación: uvicorn main:socket_app --host 0.0.0.0 --port 8002 --workers 1 --loop uvloop
 
 
 import asyncio
 import socketio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
+import nats
 import websockets
 import struct
 import json
@@ -27,8 +29,44 @@ from onvif import ONVIFCamera
 
 from starlette.middleware.gzip import GZipMiddleware
 
+
+
+NATS_SERVERS = []
+
+
+#####################################################################################
+# Crear servidor Socket.IO
+#####################################################################################
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+
+
+#####################################################################################
+# Callbacks a los eventos de subcripción NATS
+#####################################################################################
+async def message_handler(msg):
+    subject = msg.subject
+    reply = msg.reply
+    data =  struct.unpack("<ff",msg.data)
+    print("Received a message on '{subject} {reply}': {data}".format(
+        subject=subject, reply=reply, data=data))
+    await sio.emit("dato_esp32", {"dato": data[0]})
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Nos conectamos al broker NATS
+    NATS_SERVERS.append(await nats.connect("nats://demo.nats.io:4222"))
+    sub = await NATS_SERVERS[0].subscribe("aeropendulo.esp32.y", cb=message_handler)
+    yield 
+    # Cuando acaba la aplicación el yield reanuda la ejecución aquí
+    # Se desconecta del NATS
+    await sub.unsubscribe()
+    await NATS_SERVERS[0].drain()
+
+
 # Crear aplicación FastAPI
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 #####################################################################################
 # Middleware que comprime las respuestas para que la integración backend-fronted
@@ -36,11 +74,9 @@ app = FastAPI()
 #####################################################################################
 app.add_middleware(GZipMiddleware, minimum_size=1000)  # bytes
 
-
 #####################################################################################
-# Crear servidor Socket.IO
+# Conectamos la app con el socketio
 #####################################################################################
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 #####################################################################################
@@ -53,9 +89,6 @@ templates = Jinja2Templates(directory="templates")
 # Archivos estáticos del frontend
 #####################################################################################
 FRONTEND_PATH = "../virtyremlab-web-react-fronted/dist" # Cambiar por una ruta propia en 
-#despliegue de docker
-
-app.mount("/assets", StaticFiles(directory=f"{FRONTEND_PATH}/assets"), name="assets")
 
 
 #####################################################################################
@@ -65,16 +98,6 @@ app.mount("/assets", StaticFiles(directory=f"{FRONTEND_PATH}/assets"), name="ass
 @app.get("/", response_class=HTMLResponse, include_in_schema=True)
 def root():
     return FileResponse(f"{FRONTEND_PATH}/index.html")
-
-# Ruta raíz de prueba
-# @app.get("/", response_class=HTMLResponse)
-# async def root(request: Request):
-#     return templates.TemplateResponse("index.html", {"request": request})
-
-# Fallback 
-@app.exception_handler(404)
-async def redirect_404_to_root(request, exc):
-    return RedirectResponse(url="/")
 
 
 
