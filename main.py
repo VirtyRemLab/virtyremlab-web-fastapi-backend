@@ -92,14 +92,15 @@ def root():
 # # Mensajes recibidos del frontend
 # #####################################################################################
 
-# @sio.event
-# async def freq_change(sid, data):
-#     print(f"[FRONTEND] Mensaje recibido: {data['value']}")
-#     val = data['value'] if not isinstance(data['value'],(int,float)) else str(data['value'])
-#     freq_event = {"freq":val}
-#     conn = [conn for conn in esp32_websockets]
-#     await conn[0].send(json.dumps(freq_event))
-#     # emviar el dato recibido por websockets al ESP32
+@sio.event
+async def freq_change(sid, data):
+    print(f"[FRONTEND] Mensaje recibido: {data}")
+    await NATS_SERVERS[0].publish("aeropendulo.esp32.freq",struct.pack("f",data))
+    # val = data['value'] if not isinstance(data['value'],(int,float)) else str(data['value'])
+    # freq_event = {"freq":val}
+    # conn = [conn for conn in esp32_websockets]
+    # await conn[0].send(json.dumps(freq_event))
+    # emviar el dato recibido por websockets al ESP32
 
 
 # @sio.event
