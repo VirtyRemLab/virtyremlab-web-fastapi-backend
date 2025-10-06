@@ -16,10 +16,8 @@ from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.responses import FileResponse
-from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 import nats
-import websockets
 import struct
 import json
 import time
@@ -79,17 +77,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # bytes
 #####################################################################################
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
-#####################################################################################
-# Templates
-#####################################################################################
-
-templates = Jinja2Templates(directory="templates")
-
-#####################################################################################
-# Archivos estáticos del frontend
-#####################################################################################
-FRONTEND_PATH = "../virtyremlab-web-react-fronted/dist" # Cambiar por una ruta propia en 
-
 
 #####################################################################################
 # Endpoints
@@ -97,7 +84,7 @@ FRONTEND_PATH = "../virtyremlab-web-react-fronted/dist" # Cambiar por una ruta p
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=True)
 def root():
-    return FileResponse(f"{FRONTEND_PATH}/index.html")
+    return 'ok'
 
 
 

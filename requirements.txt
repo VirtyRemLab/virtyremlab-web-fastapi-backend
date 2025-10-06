@@ -1,0 +1,10 @@
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+websockets==12.*
+pydantic==2.*
+nats-py==2.*
+python-socketio==5.13.*
+starlette==0.46.*
+python-engineio==4.12.*
+onvif_zeep==0.2.12
+zeep==4.3.*
