@@ -44,17 +44,17 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 async def message_handler(msg):
     subject = msg.subject
     reply = msg.reply
-    data =  struct.unpack("<ff",msg.data)
+    data =  struct.unpack("<ffffff",msg.data)
     print("Received a message on '{subject} {reply}': {data}".format(
         subject=subject, reply=reply, data=data))
-    await sio.emit("dato_esp32", {"dato": data[0]})
+    await sio.emit("dato_esp32", {"dato": data[1]})
 
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Nos conectamos al broker NATS
-    NATS_SERVERS.append(await nats.connect("nats://demo.nats.io:4222"))
+    NATS_SERVERS.append(await nats.connect("nats://localhost:4222"))
     sub = await NATS_SERVERS[0].subscribe("aeropendulo.esp32.y", cb=message_handler)
     yield 
     # Cuando acaba la aplicación el yield reanuda la ejecución aquí
