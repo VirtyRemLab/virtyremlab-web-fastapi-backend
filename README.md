@@ -1,11 +1,17 @@
 
+# Ejecución en local
+
+```bash
+uvicorn main:socket_app --host 0.0.0.0 --port 8002 --workers 1 --loop uvloop
+```
+
 # Despliegue
 Para el despliegue se empleará un contenedor de docker. La imagen se crear a partir del ```Dockerfile```.
 
 Creación de la imagen:
 
 ```bash
-git 
+docker build -t virtyremlab-backend:v0.1 .
 ```
 
 Ejecutar el contenedor para la imagen creada:
