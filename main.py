@@ -30,7 +30,34 @@ from starlette.middleware.gzip import GZipMiddleware
 
 
 NATS_SERVERS = []
+ESP_AEROPENDULO_MSG_LENGH_FLOATS = 10
 
+
+
+
+#TODO: Sacar la configuración de la comunicación a un archivo externo que lo compartan
+# todas las imágenes de docker
+AEROPENDULO_COMS_CONFIG = {
+    "lenght":11,
+    "model":{ "mode": "estado del sistema [STANDBY, READY,TEST, PID, ALARM]",
+             "yk": "salida del sistema",
+             "rk": "Referencia",
+             "uk": "Acción de control",
+             "ek": "Error del sistema",
+             "M1": "Vel del motor 1",
+             "M2": "Vel del motor 2",
+             "vel_man": "Consigna para la velocidad manual",
+             "Kp": "Consigna para la ganancia proporcional del regulador PID",
+             "Ki": "Consigna para la ganancia integral del regulador PID",
+             "Kd": "Consigna para la ganancia diferencial del regulador PID"
+    },
+    "interface":{"event": "mandar eventos al ESP enum EVENTS {NONE:0,POWERON:1,POWEROFF:2,START_PID:3,START_TEST:4,STOP:4,RESET:5,FAULT:6"},
+                 "vel_man": "Cambiar la vel manual",
+                 "Kp":"Cambiar la Kp del sistema",
+                 "Ki":"Cambiar la Ki del sistema",
+                 "Kd":"Cambiar la Kd del sistema"
+
+}
 
 #####################################################################################
 # Crear servidor Socket.IO
@@ -44,22 +71,31 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 async def message_handler(msg):
     subject = msg.subject
     reply = msg.reply
-    data =  struct.unpack("<ffffff",msg.data)
-    print("Received a message on '{subject} {reply}': {data}".format(
-        subject=subject, reply=reply, data=data))
-    await sio.emit("dato_esp32", {"dato": data[1]})
+    data =  struct.unpack("<f",msg.data)
+    # print("Received a message on '{subject} {reply}': {data[0]}".format(
+    #     subject=subject, reply=reply, data=data))
+    #await sio.emit("dato_esp32", {"dato": data[1]})
 
+async def message_state(msg):
+    subject = msg.subject
+    reply = msg.reply
+    data_tuple =  struct.unpack("<"+"f"*AEROPENDULO_COMS_CONFIG["lenght"],msg.data)
+    print("Received a message on '{subject} {reply}': {data}".format(
+        subject=subject, reply=reply, data=data_tuple))
+    await sio.emit("aeropendulo_state", dict(zip(AEROPENDULO_COMS_CONFIG["model"].keys(),data_tuple)))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Nos conectamos al broker NATS
     NATS_SERVERS.append(await nats.connect("nats://localhost:4222"))
-    sub = await NATS_SERVERS[0].subscribe("aeropendulo.esp32.y", cb=message_handler)
+    #sub = 
+    subs = [await NATS_SERVERS[0].subscribe("aeropendulo.esp32.state", cb=message_state)]
     yield 
     # Cuando acaba la aplicación el yield reanuda la ejecución aquí
     # Se desconecta del NATS
-    await sub.unsubscribe()
+    for sub in subs:
+        await sub.unsubscribe()
     await NATS_SERVERS[0].drain()
 
 
@@ -101,6 +137,16 @@ async def freq_change(sid, data):
     # conn = [conn for conn in esp32_websockets]
     # await conn[0].send(json.dumps(freq_event))
     # emviar el dato recibido por websockets al ESP32
+
+
+for event_name, cfg in AEROPENDULO_COMS_CONFIG["interface"].items():
+    @sio.on(event_name)
+    async def handler(sid, data, cfg=cfg, event_name=event_name):
+        print(f"[FRONTEND] {event_name}: {data}")
+        packed = struct.pack("f", data)
+        await NATS_SERVERS[0].publish(f"aeropendulo.esp32.{event_name}", packed)
+
+
 
 
 # @sio.event
