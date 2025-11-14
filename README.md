@@ -16,7 +16,7 @@ docker build -t virtyremlab-backend:v0.1 .
 
 Ejecutar el contenedor para la imagen creada:
 ```bash 
-docker run -d -p 8002:8002  --name virtyremlab-backend virtyremlab-backend:v0.1
+docker run -d -p 8002:8002  --name virtyremlab-backend --network virtyremlab-net virtyremlab-backend:v0.1
 ```
 
 # NATS

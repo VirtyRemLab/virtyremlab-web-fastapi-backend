@@ -31,6 +31,7 @@ COPY ./main.py /app/main.py
 # ─────────────────────────────────────────────────────────────
 EXPOSE 8002
 
+ENV NATS_URL="nats://nats:4222"
 #  Uvicorn con UN SOLO worker.
 # Con varios workers, cada uno intentaría abrir el 8765 → "address already in use".
 CMD ["uvicorn", "main:socket_app", "--host", "0.0.0.0", "--port", "8002", "--workers", "1"]

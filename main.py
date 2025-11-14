@@ -26,12 +26,16 @@ import base64
 from onvif import ONVIFCamera
 
 from starlette.middleware.gzip import GZipMiddleware
-
+import os
+NATS_URL = os.getenv("NATS_URL","nats://localhost:4222")
 
 
 NATS_SERVERS = []
 ESP_AEROPENDULO_MSG_LENGH_FLOATS = 10
 
+IP   = "156.35.152.194"
+USER = "virtyremlab"
+PASS = "cam_aeropendulo"
 
 
 
@@ -58,6 +62,41 @@ AEROPENDULO_COMS_CONFIG = {
                  "Kd":"Cambiar la Kd del sistema"}
 
 }
+
+
+## Conversión del video
+async def ffmpeg_stream():
+    cmd = [
+        "ffmpeg",
+        "-i", f"rtsp://{USER}:{PASS}@{IP}:554/stream1",
+        "-f", "mjpeg",
+        "-"
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=subprocess.PIPE
+    )
+
+    buffer = b""
+    while True:
+        chunk = await process.stdout.read(1024)
+        if not chunk:
+            break
+        buffer += chunk
+
+        # Busca SOI (Start of Image) y EOI (End of Image) markers
+        while b'\xff\xd8' in buffer and b'\xff\xd9' in buffer:
+            start = buffer.find(b'\xff\xd8')
+            end = buffer.find(b'\xff\xd9') + 2
+            jpg = buffer[start:end]
+            buffer = buffer[end:]
+            # Base64 y enviar
+            jpg_as_text = base64.b64encode(jpg).decode('utf-8')
+            await sio.emit("video_frame", jpg_as_text)
+
+    await process.wait()
+
+
 
 #####################################################################################
 # Crear servidor Socket.IO
@@ -88,9 +127,10 @@ async def message_state(msg):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Nos conectamos al broker NATS
-    NATS_SERVERS.append(await nats.connect("nats://localhost:4222"))
+    NATS_SERVERS.append(await nats.connect(NATS_URL))
     #sub = 
     subs = [await NATS_SERVERS[0].subscribe("aeropendulo.esp32.state", cb=message_state)]
+    #asyncio.create_task(ffmpeg_stream())
     yield 
     # Cuando acaba la aplicación el yield reanuda la ejecución aquí
     # Se desconecta del NATS
@@ -194,9 +234,6 @@ for event_name, cfg in AEROPENDULO_COMS_CONFIG["interface"].items():
 # # Transmisión de video en tiempo real
 # # Lee RTSP y emite frames por socket.io
 
-# IP   = "192.168.1.167"
-# USER = "virtyremlab"
-# PASS = "cam_aeropendulo"
 
 
 
@@ -233,37 +270,6 @@ for event_name, cfg in AEROPENDULO_COMS_CONFIG["interface"].items():
 #                         'Velocity': {'PanTilt': velocity, 'Zoom': {'x': 0}}})
 #     return {"status": f"Moviendo {direction}"}
 
-# ## Conversión del video
-# async def ffmpeg_stream():
-#     cmd = [
-#         "ffmpeg",
-#         "-i", f"rtsp://{USER}:{PASS}@{IP}:554/stream1",
-#         "-f", "mjpeg",
-#         "-"
-#     ]
-#     process = await asyncio.create_subprocess_exec(
-#         *cmd,
-#         stdout=subprocess.PIPE
-#     )
-
-#     buffer = b""
-#     while True:
-#         chunk = await process.stdout.read(1024)
-#         if not chunk:
-#             break
-#         buffer += chunk
-
-#         # Busca SOI (Start of Image) y EOI (End of Image) markers
-#         while b'\xff\xd8' in buffer and b'\xff\xd9' in buffer:
-#             start = buffer.find(b'\xff\xd8')
-#             end = buffer.find(b'\xff\xd9') + 2
-#             jpg = buffer[start:end]
-#             buffer = buffer[end:]
-#             # Base64 y enviar
-#             jpg_as_text = base64.b64encode(jpg).decode('utf-8')
-#             await sio.emit("video_frame", jpg_as_text)
-
-#     await process.wait()
 
 
 # @app.on_event("startup")
