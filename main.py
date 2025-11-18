@@ -33,9 +33,6 @@ NATS_URL = os.getenv("NATS_URL","nats://localhost:4222")
 NATS_SERVERS = []
 ESP_AEROPENDULO_MSG_LENGH_FLOATS = 10
 
-IP   = "156.35.152.194"
-USER = "virtyremlab"
-PASS = "cam_aeropendulo"
 
 
 
@@ -74,37 +71,37 @@ AEROPENDULO_COMS_CONFIG = {
 }
 
 
-## Conversión del video
-async def ffmpeg_stream():
-    cmd = [
-        "ffmpeg",
-        "-i", f"rtsp://{USER}:{PASS}@{IP}:554/stream1",
-        "-f", "mjpeg",
-        "-"
-    ]
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=subprocess.PIPE
-    )
+# ## Conversión del video
+# async def ffmpeg_stream():
+#     cmd = [
+#         "ffmpeg",
+#         "-i", f"rtsp://{USER}:{PASS}@{IP}:554/stream1",
+#         "-f", "mjpeg",
+#         "-"
+#     ]
+#     process = await asyncio.create_subprocess_exec(
+#         *cmd,
+#         stdout=subprocess.PIPE
+#     )
 
-    buffer = b""
-    while True:
-        chunk = await process.stdout.read(1024)
-        if not chunk:
-            break
-        buffer += chunk
+#     buffer = b""
+#     while True:
+#         chunk = await process.stdout.read(1024)
+#         if not chunk:
+#             break
+#         buffer += chunk
 
-        # Busca SOI (Start of Image) y EOI (End of Image) markers
-        while b'\xff\xd8' in buffer and b'\xff\xd9' in buffer:
-            start = buffer.find(b'\xff\xd8')
-            end = buffer.find(b'\xff\xd9') + 2
-            jpg = buffer[start:end]
-            buffer = buffer[end:]
-            # Base64 y enviar
-            jpg_as_text = base64.b64encode(jpg).decode('utf-8')
-            await sio.emit("video_frame", jpg_as_text)
+#         # Busca SOI (Start of Image) y EOI (End of Image) markers
+#         while b'\xff\xd8' in buffer and b'\xff\xd9' in buffer:
+#             start = buffer.find(b'\xff\xd8')
+#             end = buffer.find(b'\xff\xd9') + 2
+#             jpg = buffer[start:end]
+#             buffer = buffer[end:]
+#             # Base64 y enviar
+#             jpg_as_text = base64.b64encode(jpg).decode('utf-8')
+#             await sio.emit("video_frame", jpg_as_text)
 
-    await process.wait()
+#     await process.wait()
 
 
 
