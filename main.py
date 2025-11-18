@@ -42,7 +42,7 @@ PASS = "cam_aeropendulo"
 #TODO: Sacar la configuración de la comunicación a un archivo externo que lo compartan
 # todas las imágenes de docker
 AEROPENDULO_COMS_CONFIG = {
-    "lenght":11,
+    "lenght":15,
     "model":{ "mode": "estado del sistema [STANDBY, READY,TEST, PID, ALARM]",
              "yk": "salida del sistema",
              "rk": "Referencia",
@@ -51,12 +51,22 @@ AEROPENDULO_COMS_CONFIG = {
              "M1": "Vel del motor 1",
              "M2": "Vel del motor 2",
              "vel_man": "Consigna para la velocidad manual",
+             "pos_man": "Consigna de posición manual",
+             "ctrl_mode": "Modo de control seleccionado por el usuario",
+             "ref_type": "Tipo de referencia de control elegida por el usuario",
+             "freq": "Frecuencia de las señales de referencia periódicas",
+             "amp": "Amplitud de las señales de referencia periódicas",
              "Kp": "Consigna para la ganancia proporcional del regulador PID",
              "Ki": "Consigna para la ganancia integral del regulador PID",
              "Kd": "Consigna para la ganancia diferencial del regulador PID"
     },
-    "interface":{"event": "mandar eventos al ESP enum EVENTS {NONE:0,POWERON:1,POWEROFF:2,START_PID:3,START_TEST:4,STOP:4,RESET:5,FAULT:6",
+    "interface":{"event": "mandar eventos al ESP enum EVENTS {NONE:0,POWERON:1,POWEROFF:2,START:3,STOP:4,RESET:5,FAULT:6",
                  "vel_man": "Cambiar la vel manual",
+                 "pos_man": "Consigna de posición manual",
+                 "ctrl_mode": "Modo de control seleccionado por el usuario [TEST, PID]",
+                 "ref_type": "Tipo de referencia de control elegida por el usuario",
+                 "freq": "Frecuencia de las señales de referencia periódicas",
+                 "amp": "Amplitud de las señales de referencia periódicas",
                  "Kp":"Cambiar la Kp del sistema",
                  "Ki":"Cambiar la Ki del sistema",
                  "Kd":"Cambiar la Kd del sistema"}
