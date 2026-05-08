@@ -39,7 +39,7 @@ ESP_AEROPENDULO_MSG_LENGH_FLOATS = 10
 #TODO: Sacar la configuración de la comunicación a un archivo externo que lo compartan
 # todas las imágenes de docker
 AEROPENDULO_COMS_CONFIG = {
-    "lenght":15,
+    "lenght":16,
     "model":{ "mode": "estado del sistema [STANDBY, READY,TEST, PID, ALARM]",
              "yk": "salida del sistema",
              "rk": "Referencia",
